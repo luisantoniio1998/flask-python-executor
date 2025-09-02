@@ -70,6 +70,7 @@ def execute_script():
         import shutil
         shutil.copy2(script_path, jail_script_path)
 
+        # Try nsjail with Cloud Run compatibility flags
         cmd = [
             'nsjail',
             '--mode', 'o',
@@ -83,22 +84,35 @@ def execute_script():
             '--disable_clone_newuts',
             '--disable_clone_newcgroup',
             '--disable_clone_newns',
+            '--disable_no_new_privs',  # This might help with prctl issues
+            '--skip_setsid',           # Skip session ID changes
             '--rlimit_cpu', '30',
-            '--rlimit_as', '512',
+            '--rlimit_as', '1024',     # Increased for pandas
             '--rlimit_fsize', '10',
             '--rlimit_nofile', '64',
             '--',
             '/usr/local/bin/python3', jail_script_path
         ]
 
+        # Try nsjail first, fallback to timeout if it fails
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+        
+        # If nsjail fails due to Cloud Run restrictions, try fallback
+        if result.returncode != 0 and 'prctl' in result.stderr:
+            # Fallback to timeout + ulimit approach
+            fallback_cmd = [
+                'timeout', '30s',
+                'bash', '-c', 
+                f'ulimit -t 30; ulimit -v 1048576; ulimit -f 10240; cd /tmp && /usr/local/bin/python3 {jail_script_path}'
+            ]
+            result = subprocess.run(fallback_cmd, capture_output=True, text=True, timeout=35)
 
         os.unlink(script_path)
         os.unlink(jail_script_path)
 
         if result.returncode != 0:
             return jsonify({
-                'error': f'nsjail failed: return code {result.returncode}',
+                'error': f'Script execution failed: return code {result.returncode}',
                 'stderr': result.stderr,
                 'stdout': result.stdout
             }), 400

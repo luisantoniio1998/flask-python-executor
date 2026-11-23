@@ -1,8 +1,8 @@
 # Python Code Executor
 
-A Flask API that runs Python scripts safely. Built for a coding challenge.
+I built this Flask API for a take-home coding challenge. It accepts a Python script, calls its `main()` function, and returns the result and captured output.
 
-**Live URL:** https://flask-api-715530681393.us-central1.run.app
+**Deployment URL recorded for the challenge:** https://flask-api-715530681393.us-central1.run.app
 
 ## How it works
 
@@ -45,12 +45,14 @@ curl -X POST https://flask-api-715530681393.us-central1.run.app/execute \
   -d '{"script": "def main():\n    print(\"Debug info\")\n    return {\"done\": True}"}'
 ```
 
-## What's blocked
+## Execution restrictions
 
-For security, these imports don't work:
+The challenge implementation blocks these names:
 - `os`, `subprocess` (system access)
 - `socket`, `urllib`, `requests` (network)
 - `open`, `file` (file system)
+
+These checks and resource limits are basic restrictions, not a guarantee that arbitrary Python code is safely isolated.
 
 ## Requirements
 
@@ -73,5 +75,3 @@ docker run -p 8080:8080 flask-api
 - Google Cloud Run
 - Basic sandboxing with timeout/ulimits
 - pandas 2.1.1, numpy 1.24.3
-
-Built in about 2 hours for a take-home challenge.
